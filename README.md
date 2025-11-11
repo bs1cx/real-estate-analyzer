@@ -1,0 +1,63 @@
+# Gayrimenkul Analiz Paneli (Statik HTML & JS)
+
+Bu proje, herhangi bir backend framework’ü olmadan (Next.js/FastAPI vb.) tamamen **HTML + CSS + JavaScript** ile çalışan hafif bir gayrimenkul analiz panelidir. Veri kaynağı olarak `data/mock_listings.json` dosyasını kullanır ve istemci tarafında hesaplama yapar.
+
+## Özellikler
+
+- Şehir, ilçe, mahalle, konut tipi ve sayısal aralık filtreleri
+- Satış/kira analiz modları ve yatırım endeksi hesaplaması
+- Ortalama fiyat/kira metrikleri, kira getirisi, 5 yıllık CAGR ve yatırım önerisi
+- Zaman serisi grafiği (Chart.js) ve konum haritası (Leaflet + OpenStreetMap)
+- İçgörü ve öneri kartları
+- JSON veri kaynağını kolayca güncelleyerek gerçek scraper / API ile entegre edilebilir
+
+## Kurulum & Çalıştırma
+
+1. Depoyu klonlayın veya indirin.
+2. Statik dosyaları doğrudan bir HTTP sunucusunda çalıştırın:
+
+```bash
+# Python 3 ile hızlı sunucu
+python -m http.server
+
+# veya npm ile
+npx serve .
+```
+
+3. Tarayıcıdan `http://localhost:8000` (veya sunucunun belirttiği port) adresine gidin.
+
+> Tarayıcı güvenlik kısıtları nedeniyle `index.html` dosyasını çift tıklayıp açmak (file:// protokolü) `fetch` çağrılarını engelleyebilir. Bu nedenle basit de olsa bir HTTP sunucusu kullanın.
+
+## Veri Kaynağını Güncelleme
+
+- Tüm kayıtlar `data/mock_listings.json` dosyasında bulunur.
+- Web scraping ile yeni veriler topladığınızda bu JSON dosyasını otomatik olarak güncelleyebilirsiniz.
+- JSON şeması:
+
+```jsonc
+{
+  "city": "Istanbul",
+  "district": "Besiktas",
+  "neighbourhood": "Etiler",
+  "property_type": "Apartment",
+  "size_m2": 120,
+  "rooms": 4,
+  "building_age": 5,
+  "listing_type": "sale", // "sale" veya "rent"
+  "price": 9500000,
+  "rent": null,
+  "listing_date": "2021-05-12"
+}
+```
+
+## Dış Bağımlılıklar
+
+- [Chart.js 4](https://www.chartjs.org/) (CDN üzerinden)
+- [Leaflet 1.9](https://leafletjs.com/) (CDN üzerinden)
+
+İsterseniz bu kütüphaneleri projeye dahil ederek offline kullanım da sağlayabilirsiniz.
+
+## Lisans
+
+Serbestçe özelleştirip kullanabilirsiniz. Scraper veya API entegrasyonlarınızı ekleyerek bu statik paneli gerçek verilerle besleyebilirsiniz.
+

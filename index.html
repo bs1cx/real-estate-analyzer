@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="tr">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Gayrimenkul Analiz Paneli</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+      integrity="sha384-k9ItpF+TmfZjCk2fzGEGZm4G6dkprdOCi/hTyBC0bYKT1eZq9VHtVHCfQWmvMRG4"
+      crossorigin=""
+    />
+    <link rel="stylesheet" href="./assets/styles.css" />
+  </head>
+  <body>
+    <div class="page">
+      <header>
+        <div class="header-inner">
+          <div>
+            <h1>Gayrimenkul Analiz Platformu</h1>
+            <p class="header-subtitle">
+              Türkiye genelindeki satış ve kira ilanlarını analiz ederek yatırım potansiyelini değerlendirin.
+            </p>
+          </div>
+          <div class="header-meta">
+            <span>Veri: JSON (statik + canlı güncellemeye hazır)</span>
+            <span>Teknoloji: HTML · CSS · JavaScript · Chart.js · Leaflet</span>
+          </div>
+        </div>
+      </header>
+
+      <main class="body-content">
+        <section class="card">
+          <h2>Filtreler</h2>
+          <form id="filters-form" class="filters">
+            <label class="field">
+              Şehir
+              <select data-filter-key="city"></select>
+            </label>
+
+            <label class="field">
+              İlçe
+              <select data-filter-key="district"></select>
+            </label>
+
+            <label class="field">
+              Mahalle
+              <select data-filter-key="neighbourhood"></select>
+            </label>
+
+            <label class="field">
+              Konut Tipi
+              <select data-filter-key="property_type"></select>
+            </label>
+
+            <label class="field">
+              İlan Tipi
+              <select data-filter-key="listing_type">
+                <option value="">Tümü</option>
+                <option value="sale">Satılık</option>
+                <option value="rent">Kiralık</option>
+              </select>
+            </label>
+
+            <label class="field">
+              Min m²
+              <input type="number" min="0" placeholder="0" data-filter-key="min_size" />
+            </label>
+
+            <label class="field">
+              Max m²
+              <input type="number" min="0" placeholder="0" data-filter-key="max_size" />
+            </label>
+
+            <label class="field">
+              Min Oda
+              <input type="number" min="0" placeholder="0" data-filter-key="min_rooms" />
+            </label>
+
+            <label class="field">
+              Max Oda
+              <input type="number" min="0" placeholder="0" data-filter-key="max_rooms" />
+            </label>
+
+            <label class="field">
+              Min Bina Yaşı
+              <input type="number" min="0" placeholder="0" data-filter-key="min_age" />
+            </label>
+
+            <label class="field">
+              Max Bina Yaşı
+              <input type="number" min="0" placeholder="0" data-filter-key="max_age" />
+            </label>
+          </form>
+
+          <div class="actions">
+            <button type="button" class="btn btn-outline" data-action="sale">Satış Analizi</button>
+            <button type="button" class="btn btn-outline" data-action="rent">Kira Analizi</button>
+            <button type="button" class="btn btn-primary" data-action="investment">
+              Yatırım Endeksi
+            </button>
+          </div>
+          <div id="message-box" class="message">Veri hazırlanıyor…</div>
+        </section>
+
+        <section class="card">
+          <h2>Piyasa Özeti</h2>
+          <dl id="summary-list" class="metrics-grid"></dl>
+        </section>
+
+        <section class="grid">
+          <div class="card">
+            <div class="card-header">
+              <h2>Yatırım Metrikleri</h2>
+            </div>
+            <div class="tag" id="recommendation-badge">—</div>
+            <dl id="metric-list" class="metrics-grid" style="margin-top: 1rem"></dl>
+          </div>
+
+          <div class="card" id="map-card">
+            <h2>Konum Haritası</h2>
+            <p class="card-description">
+              Şehir veya mahalle seçimine göre harita merkezi otomatik güncellenir.
+            </p>
+            <div id="map" class="map-wrapper"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Fiyat Trendleri (5 Yıl)</h2>
+          <div class="chart-container">
+            <canvas id="trend-chart"></canvas>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>İçgörüler & Öneriler</h2>
+          <ul id="insight-list" class="insights"></ul>
+        </section>
+      </main>
+
+      <footer class="footer">
+        <p>
+          Veri kaynağı örnek amaçlıdır. Reelde kullanmak için kendi scraping mekanizmanız veya API’nizle
+          <code>data/mock_listings.json</code> dosyasını otomatik güncelleyin.
+        </p>
+      </footer>
+    </div>
+
+    <script
+      src="https://cdn.jsdelivr.net/npm/chart.js@4.4.6/dist/chart.umd.min.js"
+      integrity="sha384-IUtjUcv9L6Wt6RRTnTEnnHrm7uKoyrwPll3BAxCsfc7B1Tf9ezMG8q33JwGPfzgJ"
+      crossorigin="anonymous"
+    ></script>
+    <script
+      src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+      integrity="sha384-bjAJZciV06Pq4jG3Ejj6+UeJ8V+RaH//RUW2KIiMzFxLr0X58F3RrgPf63eFUsM1"
+      crossorigin=""
+    ></script>
+    <script src="./assets/app.js" defer></script>
+  </body>
+</html>
+
