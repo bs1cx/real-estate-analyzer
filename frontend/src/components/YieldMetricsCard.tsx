@@ -20,10 +20,7 @@ function formatMetric(value: number | string | undefined, suffix?: string) {
     return value;
   }
   if (suffix === ' TRY') {
-    return (
-      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(value) +
-      ''
-    );
+    return new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 }).format(value);
   }
   return `${Number(value).toFixed(2)}${suffix ?? ''}`;
 }
@@ -48,4 +45,5 @@ export function YieldMetricsCard({ metrics }: YieldMetricsCardProps) {
     </section>
   );
 }
+
 

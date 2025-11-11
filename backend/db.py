@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import os
 from functools import lru_cache
 
@@ -9,13 +11,21 @@ from sqlalchemy.orm import sessionmaker
 def get_database_url() -> str:
     url = os.getenv("POSTGRES_URL")
     if not url:
-        raise RuntimeError("POSTGRES_URL environment variable is not set.")
+        raise RuntimeError("POSTGRES_URL environment variable is not set")
     return url
 
 
-def get_engine():
-    return create_engine(get_database_url(), future=True)
+def create_session_factory(echo: bool = False):
+    engine = create_engine(get_database_url(), echo=echo, future=True)
+    return sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=get_engine())
+SessionLocal = create_session_factory()
 
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()

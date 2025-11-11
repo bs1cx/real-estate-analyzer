@@ -1,18 +1,16 @@
-import csv
-from collections import defaultdict
-from datetime import date, datetime
-from pathlib import Path
-from typing import Dict, List, Optional
+from __future__ import annotations
 
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
+from typing import Any, Dict, List, Optional
+
+import pandas as pd
 from pydantic import BaseModel, Field
 
-DATA_FILE = Path(__file__).resolve().parents[2] / "data" / "raw" / "mock_listings.csv"
 
-
-class AggregatedInsight(BaseModel):
-    title: str
-    detail: str
-    recommendation: Optional[str] = None
+DATA_PATH = Path(__file__).resolve().parents[2] / "data" / "raw" / "mock_listings.csv"
+RECENT_YEARS = 5
 
 
 class PriceAnalysisParams(BaseModel):
@@ -21,22 +19,34 @@ class PriceAnalysisParams(BaseModel):
     neighbourhood: Optional[str] = None
     property_type: Optional[str] = None
     listing_type: Optional[str] = Field(None, pattern="^(sale|rent)$")
-    min_size: Optional[int] = Field(None, ge=0)
-    max_size: Optional[int] = Field(None, ge=0)
-    min_rooms: Optional[int] = Field(None, ge=0)
-    max_rooms: Optional[int] = Field(None, ge=0)
-    min_age: Optional[int] = Field(None, ge=0)
-    max_age: Optional[int] = Field(None, ge=0)
-    as_of: date = Field(default_factory=date.today)
+    min_size: Optional[float] = Field(None, ge=0)
+    max_size: Optional[float] = Field(None, ge=0)
+    min_rooms: Optional[float] = Field(None, ge=0)
+    max_rooms: Optional[float] = Field(None, ge=0)
+    min_age: Optional[float] = Field(None, ge=0)
+    max_age: Optional[float] = Field(None, ge=0)
+
+    def to_filter_dict(self) -> Dict[str, Any]:
+        data = self.model_dump(exclude_none=True)
+        return data
 
 
-class PricePoint(BaseModel):
+@dataclass
+class PriceSummary:
+    listings_count: int
+    average_price_per_sqm: Optional[float]
+    average_rent_per_sqm: Optional[float]
+
+
+@dataclass
+class TimeSeriesPoint:
     period: str
     average_sale_price: Optional[float]
     average_rent_price: Optional[float]
 
 
-class YieldMetrics(BaseModel):
+@dataclass
+class YieldMetrics:
     average_sale_price: Optional[float]
     average_rent_price: Optional[float]
     rental_yield_percent: Optional[float]
@@ -45,257 +55,209 @@ class YieldMetrics(BaseModel):
     recommendation: str
 
 
-class PriceSummary(BaseModel):
-    listings_count: int
-    average_price_per_sqm: Optional[float]
-    average_rent_per_sqm: Optional[float]
+@dataclass
+class Insight:
+    title: str
+    detail: str
+    recommendation: Optional[str] = None
 
 
-class PriceAnalysisResult(BaseModel):
-    filters: Dict[str, Optional[str]]
+@dataclass
+class PriceAnalysisResult:
+    filters: Dict[str, Any]
     summary: PriceSummary
-    time_series: List[PricePoint]
+    time_series: List[TimeSeriesPoint]
     yield_metrics: YieldMetrics
-    insights: List[AggregatedInsight]
+    insights: List[Insight]
 
 
-def _load_mock_data() -> List[dict]:
-    if not DATA_FILE.exists():
-        raise FileNotFoundError(
-            f"Mock data not found at {DATA_FILE}. Please run the seed script under data/scraper."
-        )
+def load_dataset(path: Path = DATA_PATH) -> pd.DataFrame:
+    if not path.exists():
+        raise FileNotFoundError(f"Mock dataset not found at {path}. Add data/raw/mock_listings.csv.")
 
-    with DATA_FILE.open("r", encoding="utf-8") as file:
-        reader = csv.DictReader(file)
-        rows = []
-        for row in reader:
-            try:
-                rows.append(
-                    {
-                        "city": row["city"],
-                        "district": row["district"],
-                        "neighbourhood": row["neighbourhood"],
-                        "property_type": row["property_type"],
-                        "size_m2": float(row["size_m2"]),
-                        "rooms": int(row["rooms"]),
-                        "building_age": int(row["building_age"]),
-                        "listing_type": row["listing_type"],
-                        "price": float(row["price"]) if row.get("price") else None,
-                        "rent": float(row["rent"]) if row.get("rent") else None,
-                        "listing_date": datetime.strptime(row["listing_date"], "%Y-%m-%d").date(),
-                    }
-                )
-            except (ValueError, KeyError) as exc:
-                raise ValueError(f"Invalid row in mock data: {row}") from exc
-        return rows
+    df = pd.read_csv(path)
+    if "listing_date" in df.columns:
+        df["listing_date"] = pd.to_datetime(df["listing_date"], errors="coerce")
+    return df
 
 
-def _within_range(value: Optional[float], minimum: Optional[float], maximum: Optional[float]) -> bool:
-    if value is None:
-        return True
-    if minimum is not None and value < minimum:
-        return False
-    if maximum is not None and value > maximum:
-        return False
-    return True
+def apply_filters(df: pd.DataFrame, params: PriceAnalysisParams) -> pd.DataFrame:
+    filtered = df.copy()
+
+    for key in ["city", "district", "neighbourhood", "property_type", "listing_type"]:
+        value = getattr(params, key)
+        if value:
+            filtered = filtered[filtered[key] == value]
+
+    numeric_filters = [
+        ("size_m2", params.min_size, params.max_size),
+        ("rooms", params.min_rooms, params.max_rooms),
+        ("building_age", params.min_age, params.max_age),
+    ]
+
+    for column, min_value, max_value in numeric_filters:
+        if min_value is not None:
+            filtered = filtered[filtered[column] >= min_value]
+        if max_value is not None:
+            filtered = filtered[filtered[column] <= max_value]
+
+    return filtered.reset_index(drop=True)
 
 
-def _filter_listings(rows: List[dict], params: PriceAnalysisParams) -> List[dict]:
-    filtered: List[dict] = []
-    for row in rows:
-        if params.city and row["city"].lower() != params.city.lower():
-            continue
-        if params.district and row["district"].lower() != params.district.lower():
-            continue
-        if params.neighbourhood and row["neighbourhood"].lower() != params.neighbourhood.lower():
-            continue
-        if params.property_type and row["property_type"].lower() != params.property_type.lower():
-            continue
-        if params.listing_type and row["listing_type"].lower() != params.listing_type.lower():
-            continue
-        if not _within_range(row["size_m2"], params.min_size, params.max_size):
-            continue
-        if not _within_range(row["rooms"], params.min_rooms, params.max_rooms):
-            continue
-        if not _within_range(row["building_age"], params.min_age, params.max_age):
-            continue
-        filtered.append(row)
-    return filtered
+def compute_summary(df: pd.DataFrame) -> PriceSummary:
+    listings_count = len(df)
+    sale_df = df[df["listing_type"] == "sale"]
+    rent_df = df[df["listing_type"] == "rent"]
 
-
-def _compute_summary(rows: List[dict]) -> PriceSummary:
-    if not rows:
-        return PriceSummary(listings_count=0, average_price_per_sqm=None, average_rent_per_sqm=None)
-
-    sale_prices_per_sqm: List[float] = []
-    rent_prices_per_sqm: List[float] = []
-
-    for row in rows:
-        sqm = row["size_m2"]
-        if row["listing_type"] == "sale" and row["price"]:
-            sale_prices_per_sqm.append(row["price"] / sqm)
-        if row["listing_type"] == "rent" and row["rent"]:
-            rent_prices_per_sqm.append(row["rent"] / sqm)
-
-    avg_sale = sum(sale_prices_per_sqm) / len(sale_prices_per_sqm) if sale_prices_per_sqm else None
-    avg_rent = sum(rent_prices_per_sqm) / len(rent_prices_per_sqm) if rent_prices_per_sqm else None
+    avg_sale = (
+        float((sale_df["price"] / sale_df["size_m2"]).mean()) if not sale_df.empty else None
+    )
+    avg_rent = (
+        float((rent_df["rent"] / rent_df["size_m2"]).mean()) if not rent_df.empty else None
+    )
 
     return PriceSummary(
-        listings_count=len(rows),
+        listings_count=listings_count,
         average_price_per_sqm=avg_sale,
         average_rent_per_sqm=avg_rent,
     )
 
 
-def _compute_time_series(rows: List[dict], as_of: date) -> List[PricePoint]:
-    if not rows:
+def compute_time_series(df: pd.DataFrame) -> List[TimeSeriesPoint]:
+    if "listing_date" not in df.columns or df["listing_date"].isna().all():
         return []
 
-    current_year = as_of.year
-    yearly_sale: Dict[int, List[float]] = defaultdict(list)
-    yearly_rent: Dict[int, List[float]] = defaultdict(list)
+    df = df.dropna(subset=["listing_date"]).copy()
+    latest = df["listing_date"].max()
+    window_start = latest - pd.DateOffset(years=RECENT_YEARS - 1)
+    df = df[df["listing_date"] >= window_start]
 
-    for row in rows:
-        year = row["listing_date"].year
-        if year < current_year - 5:
-            continue
-        if row["listing_type"] == "sale" and row["price"]:
-            yearly_sale[year].append(row["price"])
-        if row["listing_type"] == "rent" and row["rent"]:
-            yearly_rent[year].append(row["rent"])
+    df["year_month"] = df["listing_date"].dt.to_period("M")
 
-    time_series: List[PricePoint] = []
-    for year in range(current_year - 4, current_year + 1):
-        sale_values = yearly_sale.get(year)
-        rent_values = yearly_rent.get(year)
-        time_series.append(
-            PricePoint(
-                period=str(year),
-                average_sale_price=sum(sale_values) / len(sale_values) if sale_values else None,
-                average_rent_price=sum(rent_values) / len(rent_values) if rent_values else None,
+    sale_group = df[df["listing_type"] == "sale"].groupby("year_month")["price"].mean()
+    rent_group = df[df["listing_type"] == "rent"].groupby("year_month")["rent"].mean()
+
+    all_periods = sorted(set(sale_group.index).union(rent_group.index))
+
+    series: List[TimeSeriesPoint] = []
+    for period in all_periods:
+        sale_value = sale_group.get(period)
+        rent_value = rent_group.get(period)
+        series.append(
+            TimeSeriesPoint(
+                period=str(period),
+                average_sale_price=float(sale_value) if sale_value is not None and pd.notna(sale_value) else None,
+                average_rent_price=float(rent_value) if rent_value is not None and pd.notna(rent_value) else None,
             )
         )
-    return [point for point in time_series if point.average_sale_price or point.average_rent_price]
+
+    return series
 
 
-def _mean(values: List[float]) -> Optional[float]:
-    return sum(values) / len(values) if values else None
+def compute_yield_metrics(df: pd.DataFrame) -> YieldMetrics:
+    sale_df = df[df["listing_type"] == "sale"]
+    rent_df = df[df["listing_type"] == "rent"]
 
-
-def _compute_yield(time_series: List[PricePoint]) -> Dict[str, Optional[float]]:
-    if not time_series:
-        return {
-            "average_sale_price": None,
-            "average_rent_price": None,
-            "rental_yield_percent": None,
-            "five_year_cagr_percent": None,
-            "investment_index": None,
-        }
-
-    sale_prices = [point.average_sale_price for point in time_series if point.average_sale_price]
-    rent_prices = [point.average_rent_price for point in time_series if point.average_rent_price]
-
-    avg_sale = _mean(sale_prices)
-    avg_rent = _mean(rent_prices)
+    avg_sale_price = float(sale_df["price"].mean()) if not sale_df.empty else None
+    avg_rent_price = float(rent_df["rent"].mean()) if not rent_df.empty else None
 
     rental_yield = None
-    if avg_sale and avg_rent:
-        rental_yield = (12 * avg_rent) / avg_sale * 100
+    if avg_sale_price and avg_rent_price:
+        rental_yield = (avg_rent_price * 12) / avg_sale_price * 100
 
-    cagr = None
-    chronological_sales = [point.average_sale_price for point in sorted(time_series, key=lambda x: x.period) if point.average_sale_price]
-    if len(chronological_sales) >= 2:
-        beginning = chronological_sales[0]
-        ending = chronological_sales[-1]
-        years = len(chronological_sales) - 1
-        if beginning and ending and beginning > 0 and years > 0:
-            cagr = ((ending / beginning) ** (1 / years) - 1) * 100
+    five_year_cagr = None
+    if "listing_date" in sale_df.columns and not sale_df.empty:
+        sale_df = sale_df.dropna(subset=["listing_date"]).sort_values("listing_date")
+        if not sale_df.empty:
+            latest = sale_df.iloc[-1]
+            earliest_window = sale_df[sale_df["listing_date"] >= sale_df["listing_date"].max() - pd.DateOffset(years=RECENT_YEARS)]
+            if not earliest_window.empty:
+                earliest = earliest_window.iloc[0]
+                years = max((latest["listing_date"] - earliest["listing_date"]).days / 365.25, 1)
+                if earliest["price"] > 0 and years > 0:
+                    five_year_cagr = ((latest["price"] / earliest["price"]) ** (1 / years) - 1) * 100
 
     investment_index = None
-    if rental_yield is not None and cagr is not None:
-        investment_index = round((rental_yield * 0.6 + cagr * 0.4), 2)
+    recommendation = "HOLD"
 
-    return {
-        "average_sale_price": avg_sale,
-        "average_rent_price": avg_rent,
-        "rental_yield_percent": rental_yield,
-        "five_year_cagr_percent": cagr,
-        "investment_index": investment_index,
-    }
+    if rental_yield is not None and five_year_cagr is not None:
+        investment_index = rental_yield * 0.5 + five_year_cagr * 0.5
+        if investment_index >= 12:
+            recommendation = "BUY"
+        elif investment_index <= 5:
+            recommendation = "RENT"
+    elif rental_yield is not None:
+        investment_index = rental_yield
+        recommendation = "BUY" if rental_yield >= 12 else "HOLD"
+    elif five_year_cagr is not None:
+        investment_index = five_year_cagr
+        recommendation = "BUY" if five_year_cagr >= 8 else "HOLD"
 
-
-def _insight_from_index(index: Optional[float]) -> str:
-    if index is None:
-        return "HOLD"
-    if index >= 12:
-        return "BUY"
-    if index >= 8:
-        return "RENT"
-    return "HOLD"
-
-
-def _generate_insights(summary: PriceSummary, yield_metrics: YieldMetrics) -> List[AggregatedInsight]:
-    insights: List[AggregatedInsight] = [
-        AggregatedInsight(
-            title="Market Liquidity",
-            detail=f"Analyzed {summary.listings_count} listings with available market data.",
-        )
-    ]
-
-    if yield_metrics.rental_yield_percent:
-        insights.append(
-            AggregatedInsight(
-                title="Rental Yield",
-                detail=f"Average rental yield is {yield_metrics.rental_yield_percent:.2f}%.",
-            )
-        )
-
-    if yield_metrics.five_year_cagr_percent:
-        insights.append(
-            AggregatedInsight(
-                title="Price Momentum",
-                detail=f"Five-year CAGR is {yield_metrics.five_year_cagr_percent:.2f}%.",
-            )
-        )
-
-    insights[0].recommendation = yield_metrics.recommendation
-    return insights
-
-
-async def get_price_analysis(params: PriceAnalysisParams) -> PriceAnalysisResult:
-    rows = _load_mock_data()
-    filtered = _filter_listings(rows, params)
-
-    summary = _compute_summary(filtered)
-    time_series = _compute_time_series(filtered, params.as_of)
-    yield_values = _compute_yield(time_series)
-    recommendation = _insight_from_index(yield_values.get("investment_index"))
-
-    yield_metrics = YieldMetrics(
-        average_sale_price=yield_values["average_sale_price"],
-        average_rent_price=yield_values["average_rent_price"],
-        rental_yield_percent=yield_values["rental_yield_percent"],
-        five_year_cagr_percent=yield_values["five_year_cagr_percent"],
-        investment_index=yield_values["investment_index"],
+    return YieldMetrics(
+        average_sale_price=avg_sale_price,
+        average_rent_price=avg_rent_price,
+        rental_yield_percent=rental_yield,
+        five_year_cagr_percent=five_year_cagr,
+        investment_index=investment_index,
         recommendation=recommendation,
     )
 
-    filters = {
-        "city": params.city,
-        "district": params.district,
-        "neighbourhood": params.neighbourhood,
-        "property_type": params.property_type,
-        "listing_type": params.listing_type,
-        "size_range": f"{params.min_size or 0}-{params.max_size or '∞'}",
-        "room_range": f"{params.min_rooms or 0}-{params.max_rooms or '∞'}",
-        "age_range": f"{params.min_age or 0}-{params.max_age or '∞'}",
-    }
+
+def build_insights(summary: PriceSummary, metrics: YieldMetrics) -> List[Insight]:
+    insights: List[Insight] = []
+
+    insights.append(
+        Insight(
+            title="Market Activity",
+            detail=f"Analysed {summary.listings_count} listings with an average sale price per m² of "
+            f"{summary.average_price_per_sqm:.0f} TRY." if summary.average_price_per_sqm else "Insufficient sale data for price per m².",
+        )
+    )
+
+    if metrics.rental_yield_percent is not None:
+        insights.append(
+            Insight(
+                title="Rental Yield",
+                detail=f"Estimated gross rental yield sits at {metrics.rental_yield_percent:.2f}%.",
+                recommendation="BUY" if metrics.rental_yield_percent >= 12 else None,
+            )
+        )
+
+    if metrics.five_year_cagr_percent is not None:
+        insights.append(
+            Insight(
+                title="Price Momentum",
+                detail=f"Five-year CAGR is {metrics.five_year_cagr_percent:.2f}%.",
+                recommendation="BUY" if metrics.five_year_cagr_percent >= 8 else None,
+            )
+        )
+
+    insights.append(
+        Insight(
+            title="Overall Recommendation",
+            detail=f"Composite investment index suggests a {metrics.recommendation} outlook.",
+            recommendation=metrics.recommendation,
+        )
+    )
+
+    return insights
+
+
+def run_price_analysis(params: PriceAnalysisParams) -> PriceAnalysisResult:
+    df = load_dataset()
+    filtered_df = apply_filters(df, params)
+
+    summary = compute_summary(filtered_df)
+    series = compute_time_series(filtered_df)
+    metrics = compute_yield_metrics(filtered_df)
+    insights = build_insights(summary, metrics)
 
     return PriceAnalysisResult(
-        filters=filters,
+        filters=params.to_filter_dict(),
         summary=summary,
-        time_series=time_series,
-        yield_metrics=yield_metrics,
-        insights=_generate_insights(summary, yield_metrics),
+        time_series=series,
+        yield_metrics=metrics,
+        insights=insights,
     )
+
 

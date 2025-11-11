@@ -1,82 +1,39 @@
-import csv
-import os
+"""Seed script to load mock listings into PostgreSQL (optional).
+
+Run with: python seed_mock_data.py --database-url postgresql+psycopg://user:pass@host:port/db
+"""
+from __future__ import annotations
+
+import argparse
 from pathlib import Path
 
-import psycopg
+import pandas as pd
+from sqlalchemy import create_engine
 
-DATA_FILE = Path(__file__).resolve().parents[1] / "raw" / "mock_listings.csv"
-
-
-def get_connection():
-    url = os.getenv("POSTGRES_URL")
-    if not url:
-        raise RuntimeError("POSTGRES_URL environment variable is not set.")
-    return psycopg.connect(url, autocommit=True)
+DATA_PATH = Path(__file__).resolve().parents[1] / "raw" / "mock_listings.csv"
 
 
-def seed():
-    with get_connection() as conn, conn.cursor() as cur:
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS listings (
-                id SERIAL PRIMARY KEY,
-                city TEXT,
-                district TEXT,
-                neighbourhood TEXT,
-                property_type TEXT,
-                size_m2 NUMERIC,
-                rooms INTEGER,
-                building_age INTEGER,
-                listing_type TEXT,
-                price NUMERIC,
-                rent NUMERIC,
-                listing_date DATE
-            )
-            """
-        )
-        cur.execute("TRUNCATE TABLE listings;")
+def seed(database_url: str) -> None:
+    if not DATA_PATH.exists():
+        raise FileNotFoundError(f"Dataset not found at {DATA_PATH}")
 
-        with DATA_FILE.open("r", encoding="utf-8") as file:
-            reader = csv.DictReader(file)
-            rows = [
-                (
-                    row["city"],
-                    row["district"],
-                    row["neighbourhood"],
-                    row["property_type"],
-                    float(row["size_m2"]),
-                    int(row["rooms"]),
-                    int(row["building_age"]),
-                    row["listing_type"],
-                    float(row["price"]) if row["price"] else None,
-                    float(row["rent"]) if row["rent"] else None,
-                    row["listing_date"],
-                )
-                for row in reader
-            ]
+    df = pd.read_csv(DATA_PATH)
+    engine = create_engine(database_url)
 
-        cur.executemany(
-            """
-            INSERT INTO listings (
-                city,
-                district,
-                neighbourhood,
-                property_type,
-                size_m2,
-                rooms,
-                building_age,
-                listing_type,
-                price,
-                rent,
-                listing_date
-            )
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-            """,
-            rows,
-        )
-        print(f"Seeded {len(rows)} listings into the database.")
+    with engine.begin() as connection:
+        df.to_sql("listings", connection, if_exists="replace", index=False)
+
+    print("Seeded mock listings dataset to 'listings' table.")
+
+
+
+def main() -> None:
+    parser = argparse.ArgumentParser(description="Seed mock listings data into PostgreSQL")
+    parser.add_argument("--database-url", dest="database_url", required=True, help="SQLAlchemy-compatible database URL")
+
+    args = parser.parse_args()
+    seed(args.database_url)
 
 
 if __name__ == "__main__":
-    seed()
-
+    main()
