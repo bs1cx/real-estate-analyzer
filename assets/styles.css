@@ -77,6 +77,47 @@ header {
   gap: 1.5rem;
 }
 
+.tabs {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.tab-button {
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  padding: 0.65rem 1.25rem;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: var(--shadow-sm);
+}
+
+.tab-button:hover {
+  transform: translateY(-1px);
+  border-color: var(--accent);
+}
+
+.tab-button.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.tab-view {
+  display: none;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.tab-view.active {
+  display: flex;
+}
+
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -88,6 +129,13 @@ header {
 .card h2 {
   margin: 0;
   font-size: 1.2rem;
+}
+
+.card-description {
+  margin: 0.75rem 0 0;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: var(--text-secondary);
 }
 
 .filters {
@@ -254,11 +302,21 @@ header {
   color: var(--success-text);
 }
 
+.tag.error {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+}
+
 .map-wrapper {
   height: 320px;
   border-radius: 1.5rem;
   overflow: hidden;
   border: 1px solid var(--border-color);
+}
+
+.map-wrapper #map {
+  width: 100%;
+  height: 100%;
 }
 
 .message {
@@ -314,6 +372,143 @@ header {
     opacity: 1;
     transform: scale(1.1);
   }
+}
+
+.api-grid {
+  display: grid;
+  gap: 1.25rem;
+}
+
+@media (min-width: 900px) {
+  .api-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.connector-card {
+  border-radius: 1.5rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-surface);
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.connector-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+}
+
+.connector-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.status-pill {
+  font-size: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 999px;
+  background: var(--bg-muted);
+  color: var(--text-secondary);
+  border: 1px solid var(--border-color);
+}
+
+.status-pill.connected {
+  background: var(--success-bg);
+  color: var(--success-text);
+  border-color: rgba(22, 101, 52, 0.2);
+}
+
+.status-pill.error {
+  background: var(--danger-bg);
+  color: var(--danger-text);
+  border-color: rgba(185, 28, 28, 0.2);
+}
+
+.connector-fields {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.connector-fields label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.connector-fields input,
+.connector-fields textarea {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+  font-family: inherit;
+}
+
+.connector-fields .input-error {
+  border-color: var(--danger-text);
+  background: rgba(254, 226, 226, 0.45);
+}
+
+.connector-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.connector-actions .btn {
+  box-shadow: none;
+  border-radius: 0.75rem;
+}
+
+.connector-status {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  border-radius: 1rem;
+  padding: 0.6rem 0.75rem;
+  background: rgba(148, 163, 184, 0.12);
+}
+
+.connector-status strong {
+  color: var(--text-primary);
+}
+
+.connector-status.error {
+  background: rgba(185, 28, 28, 0.08);
+  color: var(--danger-text);
+}
+
+.connector-status.success {
+  background: rgba(22, 101, 52, 0.12);
+  color: var(--success-text);
+}
+
+.connector-log {
+  margin-top: 1rem;
+  border-radius: 1.25rem;
+  border: 1px dashed var(--border-color);
+  background: var(--bg-surface);
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.connector-log-entry {
+  margin: 0.35rem 0;
+}
+
+.connector-log-entry time {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-right: 0.5rem;
 }
 
 .footer {

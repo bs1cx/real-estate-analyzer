@@ -36,112 +36,165 @@
       </header>
 
       <main class="body-content">
-        <section class="card">
-          <h2>Filtreler</h2>
-          <form id="filters-form" class="filters">
-            <label class="field">
-              Şehir
-              <select data-filter-key="city"></select>
-            </label>
+        <div class="tabs">
+          <button class="tab-button active" data-tab-target="analytics">Analiz Paneli</button>
+          <button class="tab-button" data-tab-target="integrations">API Entegrasyonları</button>
+        </div>
 
-            <label class="field">
-              İlçe
-              <select data-filter-key="district"></select>
-            </label>
+        <section class="tab-view active" data-tab-view="analytics">
+          <section class="card">
+            <h2>Filtreler</h2>
+            <form id="filters-form" class="filters">
+              <label class="field">
+                Şehir
+                <select data-filter-key="city"></select>
+              </label>
 
-            <label class="field">
-              Mahalle
-              <select data-filter-key="neighbourhood"></select>
-            </label>
+              <label class="field">
+                İlçe
+                <select data-filter-key="district"></select>
+              </label>
 
-            <label class="field">
-              Konut Tipi
-              <select data-filter-key="property_type"></select>
-            </label>
+              <label class="field">
+                Mahalle
+                <select data-filter-key="neighbourhood"></select>
+              </label>
 
-            <label class="field">
-              İlan Tipi
-              <select data-filter-key="listing_type">
-                <option value="">Tümü</option>
-                <option value="sale">Satılık</option>
-                <option value="rent">Kiralık</option>
-              </select>
-            </label>
+              <label class="field">
+                Konut Tipi
+                <select data-filter-key="property_type"></select>
+              </label>
 
-            <label class="field">
-              Min m²
-              <input type="number" min="0" placeholder="0" data-filter-key="min_size" />
-            </label>
+              <label class="field">
+                İlan Tipi
+                <select data-filter-key="listing_type">
+                  <option value="">Tümü</option>
+                  <option value="sale">Satılık</option>
+                  <option value="rent">Kiralık</option>
+                </select>
+              </label>
 
-            <label class="field">
-              Max m²
-              <input type="number" min="0" placeholder="0" data-filter-key="max_size" />
-            </label>
+              <label class="field">
+                Min m²
+                <input type="number" min="0" placeholder="0" data-filter-key="min_size" />
+              </label>
 
-            <label class="field">
-              Min Oda
-              <input type="number" min="0" placeholder="0" data-filter-key="min_rooms" />
-            </label>
+              <label class="field">
+                Max m²
+                <input type="number" min="0" placeholder="0" data-filter-key="max_size" />
+              </label>
 
-            <label class="field">
-              Max Oda
-              <input type="number" min="0" placeholder="0" data-filter-key="max_rooms" />
-            </label>
+              <label class="field">
+                Min Oda
+                <input type="number" min="0" placeholder="0" data-filter-key="min_rooms" />
+              </label>
 
-            <label class="field">
-              Min Bina Yaşı
-              <input type="number" min="0" placeholder="0" data-filter-key="min_age" />
-            </label>
+              <label class="field">
+                Max Oda
+                <input type="number" min="0" placeholder="0" data-filter-key="max_rooms" />
+              </label>
 
-            <label class="field">
-              Max Bina Yaşı
-              <input type="number" min="0" placeholder="0" data-filter-key="max_age" />
-            </label>
-          </form>
+              <label class="field">
+                Min Bina Yaşı
+                <input type="number" min="0" placeholder="0" data-filter-key="min_age" />
+              </label>
 
-          <div class="actions">
-            <button type="button" class="btn btn-outline" data-action="sale">Satış Analizi</button>
-            <button type="button" class="btn btn-outline" data-action="rent">Kira Analizi</button>
-            <button type="button" class="btn btn-primary" data-action="investment">
-              Yatırım Endeksi
-            </button>
-          </div>
-          <div id="message-box" class="message">Veri hazırlanıyor…</div>
-        </section>
+              <label class="field">
+                Max Bina Yaşı
+                <input type="number" min="0" placeholder="0" data-filter-key="max_age" />
+              </label>
+            </form>
 
-        <section class="card">
-          <h2>Piyasa Özeti</h2>
-          <dl id="summary-list" class="metrics-grid"></dl>
-        </section>
-
-        <section class="grid">
-          <div class="card">
-            <div class="card-header">
-              <h2>Yatırım Metrikleri</h2>
+            <div class="actions">
+              <button type="button" class="btn btn-outline" data-action="sale">Satış Analizi</button>
+              <button type="button" class="btn btn-outline" data-action="rent">Kira Analizi</button>
+              <button type="button" class="btn btn-primary" data-action="investment">
+                Yatırım Endeksi
+              </button>
             </div>
-            <div class="tag" id="recommendation-badge">—</div>
-            <dl id="metric-list" class="metrics-grid" style="margin-top: 1rem"></dl>
-          </div>
+            <div id="message-box" class="message">Veri hazırlanıyor…</div>
+          </section>
 
-          <div class="card" id="map-card">
-            <h2>Konum Haritası</h2>
+          <section class="card">
+            <h2>Piyasa Özeti</h2>
+            <dl id="summary-list" class="metrics-grid"></dl>
+          </section>
+
+          <section class="grid">
+            <div class="card">
+              <div class="card-header">
+                <h2>Yatırım Metrikleri</h2>
+              </div>
+              <div class="tag" id="recommendation-badge">—</div>
+              <dl id="metric-list" class="metrics-grid" style="margin-top: 1rem"></dl>
+            </div>
+
+            <div class="card" id="map-card">
+              <h2>Konum Haritası</h2>
+              <p class="card-description">
+                Şehir veya mahalle seçimine göre harita merkezi otomatik güncellenir.
+              </p>
+              <div class="map-wrapper">
+                <div id="map"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Fiyat Trendleri (5 Yıl)</h2>
+            <div class="chart-container">
+              <canvas id="trend-chart"></canvas>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>İçgörüler & Öneriler</h2>
+            <ul id="insight-list" class="insights"></ul>
+          </section>
+        </section>
+
+        <section class="tab-view" data-tab-view="integrations">
+          <section class="card">
+            <h2>API Bağlantıları</h2>
             <p class="card-description">
-              Şehir veya mahalle seçimine göre harita merkezi otomatik güncellenir.
+              Türkiye’de en popüler 10 emlak platformu için bağlantı noktalarınızı ekleyin.
+              Her kaynak JSON olarak ilan listesi döndürmelidir. Başarılı eşleşmeler
+              otomatik olarak analiz paneline aktarılır.
             </p>
-            <div id="map" class="map-wrapper"></div>
-          </div>
-        </section>
+            <div class="api-grid" id="connector-list"></div>
+            <div class="connector-log" id="connector-log">
+              API bağlantı günlükleri burada görüntülenecek.
+            </div>
+          </section>
 
-        <section class="card">
-          <h2>Fiyat Trendleri (5 Yıl)</h2>
-          <div class="chart-container">
-            <canvas id="trend-chart"></canvas>
-          </div>
-        </section>
-
-        <section class="card">
-          <h2>İçgörüler & Öneriler</h2>
-          <ul id="insight-list" class="insights"></ul>
+          <section class="card">
+            <h2>Beklenen JSON Şeması</h2>
+            <p>
+              API uç noktaları aşağıdaki alanları içeren bir dizi nesne döndürmelidir.
+              Alan adları farklıysa eşleştirme otomatik olarak yapılmaya çalışılır.
+            </p>
+            <pre class="message">
+[
+  {
+    "city": "Istanbul",
+    "district": "Besiktas",
+    "neighbourhood": "Etiler",
+    "property_type": "Apartment",
+    "size_m2": 120,
+    "rooms": 4,
+    "building_age": 5,
+    "listing_type": "sale",
+    "price": 9500000,
+    "rent": null,
+    "listing_date": "2024-01-01"
+  }
+]
+            </pre>
+            <p class="card-description">
+              Scraper veya API istemciniz CORS kısıtlamaları nedeniyle doğrudan çağrılamıyorsa,
+              araya kendi proxy sunucunuzu eklemeniz gerekebilir.
+            </p>
+          </section>
         </section>
       </main>
 

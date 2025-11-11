@@ -10,6 +10,7 @@ Bu proje, herhangi bir backend framework’ü olmadan (Next.js/FastAPI vb.) tama
 - Zaman serisi grafiği (Chart.js) ve konum haritası (Leaflet + OpenStreetMap)
 - İçgörü ve öneri kartları
 - JSON veri kaynağını kolayca güncelleyerek gerçek scraper / API ile entegre edilebilir
+- Popüler 10 emlak platformu için API entegrasyon sekmesi (Sahibinden, Hepsiemlak, Zingat, Emlakjet, Coldwell Banker TR, RE/MAX Türkiye, Century 21 Türkiye, Flatfy Türkiye, Trem Global, Hürriyet Emlak)
 
 ## Kurulum & Çalıştırma
 
@@ -49,6 +50,18 @@ npx serve .
   "listing_date": "2021-05-12"
 }
 ```
+
+## API Entegrasyon Sekmesi
+
+- `Analiz Paneli` sekmesinin yanındaki `API Entegrasyonları` sekmesi, 10 popüler portal için endpoint tanımlamanıza izin verir.
+- Her kartta:
+  - **API Endpoint**: JSON döndüren URL. Gerekiyorsa kendi scraper/proxy servisinizi yazın.
+  - **API Anahtarı / Token**: İsteğe bağlı. Girilen değer otomatik olarak `Authorization` başlığına eklenir (Bearer formatında değilse `Bearer` prefix’i eklenir).
+  - **Ek Başlıklar**: JSON formatında ekstra header girebilirsiniz (ör. `{"X-API-KEY":"..."}`).
+- “Test Et” butonu sadece bağlantıyı kontrol eder, veri setini güncellemez.
+- “Veri Çek” butonu gelen kaydı normalize eder, mevcut veri kümesine ekler, filtreleri ve analizi canlı olarak günceller.
+- Beklenen JSON yapısı yukarıdaki örnekle aynıdır. Alan adları farklıysa uygulama otomatik eşleşme yapmaya çalışır (`city`, `il`, `province` vb.).
+- CORS kısıtları olan kaynaklar için ara bir proxy veya serverless fonksiyon kullanmanız gerekebilir.
 
 ## Dış Bağımlılıklar
 
