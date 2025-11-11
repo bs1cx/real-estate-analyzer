@@ -39,6 +39,7 @@
         <div class="tabs">
           <button class="tab-button active" data-tab-target="analytics">Analiz Paneli</button>
           <button class="tab-button" data-tab-target="integrations">API Entegrasyonları</button>
+          <button class="tab-button" data-tab-target="scraper">Web Scraper</button>
         </div>
 
         <section class="tab-view active" data-tab-view="analytics">
@@ -193,6 +194,76 @@
             <p class="card-description">
               Scraper veya API istemciniz CORS kısıtlamaları nedeniyle doğrudan çağrılamıyorsa,
               araya kendi proxy sunucunuzu eklemeniz gerekebilir.
+            </p>
+          </section>
+        </section>
+
+        <section class="tab-view" data-tab-view="scraper">
+          <section class="card">
+            <h2>Web Scraper (Sahibinden.com)</h2>
+            <p class="card-description">
+              Bu arayüz, kendi scraper servisiniz üzerinden sahibinden.com&rsquo;daki arama veya liste sayfalarını
+              tarayarak ilan detaylarını JSON formatında almanızı sağlar. Dönen kayıtlar analiz paneline eklenir.
+            </p>
+
+            <div class="scraper-settings">
+              <label>
+                Scraper Servis Baz URL
+                <input
+                  id="scraper-base-input"
+                  type="url"
+                  placeholder="https://scraper.yourdomain.com"
+                  autocomplete="off"
+                />
+              </label>
+              <button type="button" class="btn btn-outline" data-scraper-action="save-base">Kaydet</button>
+              <button type="button" class="btn btn-outline" data-scraper-action="test-base">Bağlantıyı Test Et</button>
+            </div>
+
+            <div class="scraper-form">
+              <label>
+                Sahibinden URL&rsquo;si
+                <input
+                  id="scraper-url-input"
+                  type="url"
+                  placeholder="https://www.sahibinden.com/satilik?address_region=istanbul"
+                  autocomplete="off"
+                />
+              </label>
+              <div class="scraper-actions">
+                <button type="button" class="btn btn-primary" data-scraper-action="scrape">İlanları Çek</button>
+                <button type="button" class="btn btn-outline" data-scraper-action="clear-preview">Önizlemeyi Temizle</button>
+              </div>
+            </div>
+
+            <div id="scraper-status" class="connector-status scraper-status">
+              Servis URL’sini kaydedip hedef URL girerek başlayın.
+            </div>
+            <div id="scraper-preview" class="scraper-preview" hidden></div>
+            <div id="scraper-log" class="scraper-log">
+              Scraper günlükleri burada görüntülenecek.
+            </div>
+          </section>
+
+          <section class="card">
+            <h2>Scraper Servisini Çalıştırma</h2>
+            <p class="card-description">
+              Repodaki <code>scraper-service/</code> klasörü Playwright tabanlı örnek FastAPI hizmeti içerir.
+              Aşağıdaki adımları izleyerek hızlıca devreye alabilirsiniz:
+            </p>
+            <pre class="message">
+cd scraper-service
+python -m venv .venv
+. .venv/Scripts/activate   # macOS/Linux: source .venv/bin/activate
+pip install -r requirements.txt
+playwright install chromium
+uvicorn main:app --reload
+            </pre>
+            <p class="card-description">
+              Servis ayakta olduğunda <code>/scrape?url=&lt;HedefURL&gt;</code> uç noktası,
+              <code>{ "listings": [...] }</code> formatında yanıt vermelidir. Dönen her kayıt
+              <code>city</code>, <code>district</code>, <code>property_type</code>, <code>listing_type</code>,
+              <code>price</code>, <code>rent</code>, <code>features</code> gibi alanları içermelidir.
             </p>
           </section>
         </section>

@@ -63,6 +63,51 @@ npx serve .
 - Beklenen JSON yapısı yukarıdaki örnekle aynıdır. Alan adları farklıysa uygulama otomatik eşleşme yapmaya çalışır (`city`, `il`, `province` vb.).
 - CORS kısıtları olan kaynaklar için ara bir proxy veya serverless fonksiyon kullanmanız gerekebilir.
 
+## Web Scraper Sekmesi
+
+- `Web Scraper` sekmesi, **sahibinden.com** üzerindeki arama veya listeleme sayfalarını tarayıp ilanları JSON formatında döndüren harici bir servis bekler.
+- Depodaki `scraper-service/` klasörü FastAPI + Playwright tabanlı örnek servis içerir. Kurulum:
+
+  ```bash
+  cd scraper-service
+  python -m venv .venv
+  # Windows: .venv\Scripts\Activate.ps1
+  # macOS/Linux: source .venv/bin/activate
+  pip install -r requirements.txt
+  playwright install chromium
+  uvicorn main:app --reload  # servis http://localhost:8001 üzerinde çalışır
+  ```
+
+- Frontend’de “Scraper Servis Baz URL” alanına bu servisin kök URL’sini (örn. `http://localhost:8001`) yazın.
+- “İlanları Çek” butonu `GET /scrape?url=...` isteği gönderir ve servis `{"listings": [...]}` döndürmelidir. Örnek yanıt:
+
+  ```jsonc
+  {
+    "listings": [
+      {
+        "city": "Istanbul",
+        "district": "Besiktas",
+        "neighbourhood": "Etiler",
+        "property_type": "Apartment",
+        "listing_type": "sale",
+        "size_m2": 120,
+        "rooms": "3+1",
+        "building_age": "5-10",
+        "price": 9500000,
+        "rent": null,
+        "listing_date": "11.11.2025",
+        "url": "https://www.sahibinden.com/ilan/...",
+        "source": "sahibinden",
+        "features": ["Eşyalı", "Site İçinde", "Asansör"]
+      }
+    ],
+    "count": 10
+  }
+  ```
+
+- Scraper servisi sahaya özgü CSS seçicilerle çalışır; `scraper-service/main.py` içindeki `parse_listing_row` ve `fetch_listing_details` fonksiyonlarını güncel HTML yapısına göre uyarlayın.
+- Sahibinden içeriğini otomatik çekmeden önce kullanım koşullarını ve hukuki kısıtlamaları kontrol edin; bu kod yalnızca teknik bir örnektir.
+
 ## Dış Bağımlılıklar
 
 - [Chart.js 4](https://www.chartjs.org/) (CDN üzerinden)

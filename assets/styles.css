@@ -118,6 +118,107 @@ header {
   display: flex;
 }
 
+.scraper-settings {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+}
+
+.scraper-settings label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.scraper-settings input {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  padding: 0.6rem 0.75rem;
+  font-size: 0.95rem;
+  min-width: clamp(280px, 30vw, 380px);
+}
+
+.scraper-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: flex-end;
+  margin-top: 1rem;
+}
+
+.scraper-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  flex: 1 1 260px;
+}
+
+.scraper-form input,
+.scraper-form textarea {
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-color);
+  padding: 0.65rem 0.75rem;
+  font-size: 0.95rem;
+}
+
+.scraper-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.scraper-status {
+  margin-top: 1rem;
+}
+
+.scraper-preview {
+  margin-top: 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-muted);
+  padding: 1rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.scraper-preview code {
+  display: block;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: 'Fira Code', 'SFMono-Regular', Consolas, 'Liberation Mono', Menlo, monospace;
+  font-size: 0.75rem;
+  background: rgba(15, 23, 42, 0.04);
+  padding: 0.75rem;
+  border-radius: 0.75rem;
+}
+
+.scraper-log {
+  margin-top: 1rem;
+  border-radius: 1.25rem;
+  border: 1px dashed var(--border-color);
+  background: var(--bg-surface);
+  padding: 1rem 1.25rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  max-height: 220px;
+  overflow-y: auto;
+}
+
+.scraper-log-entry {
+  margin: 0.35rem 0;
+}
+
+.scraper-log-entry time {
+  font-size: 0.75rem;
+  color: #94a3b8;
+  margin-right: 0.5rem;
+}
+
 .card {
   background: var(--bg-surface);
   border: 1px solid var(--border-color);
@@ -487,6 +588,82 @@ header {
 .connector-status.success {
   background: rgba(22, 101, 52, 0.12);
   color: var(--success-text);
+}
+
+.scraper-status {
+  font-size: 0.9rem;
+  padding: 0.8rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-muted);
+  color: var(--text-secondary);
+}
+
+.scraper-status.success {
+  background: rgba(22, 101, 52, 0.1);
+  color: var(--success-text);
+  border-color: rgba(22, 101, 52, 0.2);
+}
+
+.scraper-status.error {
+  background: rgba(185, 28, 28, 0.1);
+  color: var(--danger-text);
+  border-color: rgba(185, 28, 28, 0.2);
+}
+
+.scraper-results {
+  display: grid;
+  gap: 1rem;
+}
+
+@media (min-width: 900px) {
+  .scraper-results {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+.result-card {
+  border-radius: 1.25rem;
+  border: 1px solid var(--border-color);
+  padding: 1.25rem;
+  background: var(--bg-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.result-card h3 {
+  margin: 0;
+  font-size: 1rem;
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.result-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.feature-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.feature-pill {
+  border-radius: 999px;
+  padding: 0.25rem 0.6rem;
+  background: rgba(37, 99, 235, 0.12);
+  color: var(--accent-strong);
+}
+
+.result-card a {
+  font-size: 0.85rem;
 }
 
 .connector-log {

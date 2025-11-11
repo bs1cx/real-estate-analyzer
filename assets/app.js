@@ -1,4 +1,7 @@
 const DATA_URL = './data/mock_listings.json';
+const STORAGE_KEYS = {
+  SCRAPER_BASE_URL: 'rea.scraper.baseUrl',
+};
 
 const CONNECTOR_SOURCES = [
   {
@@ -79,6 +82,10 @@ const state = {
     min_age: '',
     max_age: '',
   },
+  scraper: {
+    baseUrl: '',
+    lastUrl: '',
+  },
 };
 
 const connectors = CONNECTOR_SOURCES.map((source) => ({
@@ -107,6 +114,12 @@ const ui = {
   tabViews: document.querySelectorAll('[data-tab-view]'),
   connectorList: document.querySelector('#connector-list'),
   connectorLog: document.querySelector('#connector-log'),
+  scraperBaseInput: document.querySelector('#scraper-base-input'),
+  scraperUrlInput: document.querySelector('#scraper-url-input'),
+  scraperActions: document.querySelectorAll('[data-scraper-action]'),
+  scraperStatus: document.querySelector('#scraper-status'),
+  scraperPreview: document.querySelector('#scraper-preview'),
+  scraperLog: document.querySelector('#scraper-log'),
 };
 
 let chartInstance = null;
@@ -625,6 +638,42 @@ function registerEventListeners() {
       }
     });
   }
+
+  if (ui.scraperBaseInput) {
+    ui.scraperBaseInput.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        const value = ui.scraperBaseInput.value;
+        if (value.trim()) {
+          const saved = setScraperBaseUrl(value);
+          setScraperStatus(`Servis URL’si kaydedildi: ${saved}`, 'success');
+          logScraperEvent(`Servis URL güncellendi: ${saved}`);
+        }
+      }
+    });
+  }
+
+  ui.scraperActions.forEach((button) => {
+    button.addEventListener('click', () => {
+      const action = button.dataset.scraperAction;
+      if (action === 'save-base') {
+        const value = ui.scraperBaseInput?.value ?? '';
+        if (!value.trim()) {
+          setScraperStatus('Geçerli bir servis URL’si girin.', 'error');
+          return;
+        }
+        const saved = setScraperBaseUrl(value);
+        setScraperStatus(`Servis URL’si kaydedildi: ${saved}`, 'success');
+        logScraperEvent(`Servis URL ayarlandı: ${saved}`);
+      } else if (action === 'test-base') {
+        void testScraperService();
+      } else if (action === 'scrape') {
+        void runScraper();
+      } else if (action === 'clear-preview') {
+        clearScraperPreview();
+      }
+    });
+  });
 }
 
 function activateTab(target) {
@@ -746,6 +795,169 @@ function logConnectorEvent(message) {
   ui.connectorLog.prepend(entry);
   while (ui.connectorLog.children.length > 50) {
     ui.connectorLog.removeChild(ui.connectorLog.lastChild);
+  }
+}
+
+function loadScraperConfig() {
+  if (!ui.scraperBaseInput) {
+    return;
+  }
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS.SCRAPER_BASE_URL);
+    if (stored) {
+      state.scraper.baseUrl = stored;
+      ui.scraperBaseInput.value = stored;
+      setScraperStatus(`Servis URL'si kaydedildi: ${stored}`, 'success');
+    }
+  } catch (error) {
+    console.error('Scraper config okunamadı:', error);
+  }
+}
+
+function setScraperBaseUrl(url) {
+  const trimmed = url.trim().replace(/\/+$/, '');
+  state.scraper.baseUrl = trimmed;
+  if (ui.scraperBaseInput) {
+    ui.scraperBaseInput.value = trimmed;
+  }
+  try {
+    if (trimmed) {
+      localStorage.setItem(STORAGE_KEYS.SCRAPER_BASE_URL, trimmed);
+    } else {
+      localStorage.removeItem(STORAGE_KEYS.SCRAPER_BASE_URL);
+    }
+  } catch (error) {
+    console.warn('Scraper config yazılamadı:', error);
+  }
+  return trimmed;
+}
+
+function getScraperBaseUrl() {
+  return state.scraper.baseUrl?.trim().replace(/\/+$/, '') ?? '';
+}
+
+function setScraperStatus(message, variant = 'idle') {
+  if (!ui.scraperStatus) return;
+  const classes = ['connector-status', 'scraper-status'];
+  if (variant === 'success') classes.push('success');
+  if (variant === 'error') classes.push('error');
+  if (variant === 'connecting') classes.push('connecting');
+  ui.scraperStatus.className = classes.join(' ');
+  ui.scraperStatus.innerHTML = message;
+}
+
+function logScraperEvent(message) {
+  if (!ui.scraperLog) return;
+  const entry = document.createElement('div');
+  entry.className = 'scraper-log-entry';
+  const time = document.createElement('time');
+  time.textContent = new Date().toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  entry.appendChild(time);
+  entry.append(message);
+  ui.scraperLog.prepend(entry);
+  while (ui.scraperLog.children.length > 100) {
+    ui.scraperLog.removeChild(ui.scraperLog.lastChild);
+  }
+}
+
+function showScraperPreview(listings) {
+  if (!ui.scraperPreview) return;
+  if (!Array.isArray(listings) || listings.length === 0) {
+    ui.scraperPreview.hidden = true;
+    ui.scraperPreview.innerHTML = '';
+    return;
+  }
+  const sample = listings.slice(0, 3);
+  const total = listings.length;
+  ui.scraperPreview.innerHTML = `
+    <strong>${total} kayıt alındı. İlk ${sample.length} örnek:</strong>
+    <code>${JSON.stringify(sample, null, 2)}</code>
+  `;
+  ui.scraperPreview.hidden = false;
+}
+
+function clearScraperPreview() {
+  state.scraper.lastUrl = '';
+  showScraperPreview([]);
+  setScraperStatus('Önizleme temizlendi. Yeni bir URL ile tekrar deneyebilirsiniz.', 'idle');
+}
+
+async function testScraperService() {
+  const base = getScraperBaseUrl();
+  if (!base) {
+    setScraperStatus('Önce geçerli bir servis URL’si kaydedin.', 'error');
+    return;
+  }
+  try {
+    setScraperStatus('Servis bağlantısı test ediliyor…', 'connecting');
+    logScraperEvent(`Test isteği: ${base}/health`);
+    const response = await fetch(`${base}/health`, { headers: { Accept: 'application/json' } });
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}`);
+    }
+    const payload = await response.json().catch(() => ({}));
+    setScraperStatus(`Servis yanıtı başarılı: ${JSON.stringify(payload)}`, 'success');
+    logScraperEvent('Test başarılı.');
+  } catch (error) {
+    setScraperStatus(`Servis testi başarısız: ${error instanceof Error ? error.message : String(error)}`, 'error');
+    logScraperEvent(`Test hatası: ${error instanceof Error ? error.message : String(error)}`);
+  }
+}
+
+async function runScraper() {
+  const base = getScraperBaseUrl();
+  const target = ui.scraperUrlInput?.value.trim();
+  if (!base) {
+    setScraperStatus('Önce scraper servis URL’sini kaydedin.', 'error');
+    return;
+  }
+  if (!target) {
+    setScraperStatus('Analiz etmek istediğiniz sahibinden URL’sini girin.', 'error');
+    return;
+  }
+
+  try {
+    const endpoint = `${base}/scrape?url=${encodeURIComponent(target)}`;
+    setScraperStatus('Scraper çalıştırılıyor, lütfen bekleyin…', 'connecting');
+    logScraperEvent(`Scrape isteği: ${endpoint}`);
+
+    const response = await fetch(endpoint, {
+      headers: { Accept: 'application/json' },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP ${response.status}: ${errorText.slice(0, 200)}`);
+    }
+
+    const payload = await response.json();
+    const listings = Array.isArray(payload.listings)
+      ? payload.listings
+      : Array.isArray(payload)
+      ? payload
+      : [];
+
+    if (!Array.isArray(listings) || listings.length === 0) {
+      throw new Error('Geçerli "listings" dizisi bulunamadı.');
+    }
+
+    const normalized = listings
+      .map((item) => normalizeExternalListing(item, item.source ?? 'Scraper'))
+      .filter((item) => item !== null);
+
+    const inserted = mergeListings(normalized);
+    state.scraper.lastUrl = target;
+    showScraperPreview(normalized);
+    populateFilterOptions();
+    applyFilters();
+
+    const summary = `${normalized.length} kayıt işlendi, ${inserted} yeni kayıt analize eklendi.`;
+    setScraperStatus(summary, 'success');
+    logScraperEvent(summary);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    setScraperStatus(`Scraper hatası: ${message}`, 'error');
+    logScraperEvent(`Scraper hatası: ${message}`);
   }
 }
 
@@ -875,6 +1087,7 @@ function normalizeExternalListing(listing, sourceName) {
     rent: listingType === 'rent' ? rent : null,
     listing_date: listingDate && !Number.isNaN(listingDate.valueOf()) ? listingDate : null,
     source: sourceName,
+    features: Array.isArray(listing.features) ? listing.features : [],
   };
 }
 
@@ -952,7 +1165,12 @@ function mergeListings(newListings) {
 
 function initialize() {
   renderConnectors();
+  loadScraperConfig();
   registerEventListeners();
+  if (!state.scraper.baseUrl) {
+    setScraperStatus('Servis URL’sini kaydedip bir Sahibinden bağlantısı girerek başlayın.', 'idle');
+  }
+  showScraperPreview([]);
   activateTab('analytics');
   loadData();
 }
